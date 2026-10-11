@@ -1,0 +1,6 @@
+{
+  "name": "bubble blaster(reborn for adventure)",
+  "description": "Classic arcade bubble blaster adventure with animated cute dragon mascot, 300 levels, 500 skin colors, arcade physics, and fever combos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
