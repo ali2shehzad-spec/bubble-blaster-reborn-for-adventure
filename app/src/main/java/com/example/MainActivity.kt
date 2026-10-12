@@ -41,6 +41,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Global crash guard to ensure application resilience against sudden crashes
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            android.util.Log.e("CrashGuard", "Intercepted uncaught error on thread ${thread.name}: ${throwable.message}", throwable)
+            try {
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    try {
+                        gameViewModel.navigateTo(GameScreen.HOME)
+                    } catch (_: Throwable) {}
+                }
+            } catch (_: Throwable) {}
+        }
+
         setContent {
             MyApplicationTheme(darkTheme = true) {
                 Surface(

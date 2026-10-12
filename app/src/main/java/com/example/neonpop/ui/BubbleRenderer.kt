@@ -39,30 +39,32 @@ object BubbleRenderer {
         if (alpha <= 0.01f || scale <= 0.01f) return
         val r = radius * scale
 
-        when (type) {
-            is BubbleType.Normal -> drawNormalBubble(drawScope, cx, cy, r, type.color, showSymbols, alpha)
-            is BubbleType.Rainbow -> drawRainbowBubble(drawScope, cx, cy, r, alpha)
-            is BubbleType.Bomb -> drawBombBubble(drawScope, cx, cy, r, alpha)
-            is BubbleType.Lightning -> drawLightningBubble(drawScope, cx, cy, r, alpha)
-            is BubbleType.Prism -> drawPrismBubble(drawScope, cx, cy, r, alpha)
-            is BubbleType.BlackHole -> drawBlackHoleBubble(drawScope, cx, cy, r, alpha)
-            is BubbleType.Freeze -> drawFreezeBubble(drawScope, cx, cy, r, alpha)
-            is BubbleType.Paint -> drawNormalBubble(drawScope, cx, cy, r, type.color, showSymbols, alpha, isPaint = true)
-            is BubbleType.Meteor -> drawMeteorBubble(drawScope, cx, cy, r, alpha)
-            is BubbleType.Ghost -> drawGhostBubble(drawScope, cx, cy, r, alpha)
-            is BubbleType.Crystal -> drawCrystalBubble(drawScope, cx, cy, r, type.hitsLeft, alpha)
-            is BubbleType.Chain -> {
-                drawNormalBubble(drawScope, cx, cy, r, type.color, showSymbols, alpha)
-                if (type.locked) drawChains(drawScope, cx, cy, r, alpha)
+        try {
+            when (type) {
+                is BubbleType.Normal -> drawNormalBubble(drawScope, cx, cy, r, type.color, showSymbols, alpha)
+                is BubbleType.Rainbow -> drawRainbowBubble(drawScope, cx, cy, r, alpha)
+                is BubbleType.Bomb -> drawBombBubble(drawScope, cx, cy, r, alpha)
+                is BubbleType.Lightning -> drawLightningBubble(drawScope, cx, cy, r, alpha)
+                is BubbleType.Prism -> drawPrismBubble(drawScope, cx, cy, r, alpha)
+                is BubbleType.BlackHole -> drawBlackHoleBubble(drawScope, cx, cy, r, alpha)
+                is BubbleType.Freeze -> drawFreezeBubble(drawScope, cx, cy, r, alpha)
+                is BubbleType.Paint -> drawNormalBubble(drawScope, cx, cy, r, type.color, showSymbols, alpha, isPaint = true)
+                is BubbleType.Meteor -> drawMeteorBubble(drawScope, cx, cy, r, alpha)
+                is BubbleType.Ghost -> drawGhostBubble(drawScope, cx, cy, r, alpha)
+                is BubbleType.Crystal -> drawCrystalBubble(drawScope, cx, cy, r, type.hitsLeft, alpha)
+                is BubbleType.Chain -> {
+                    drawNormalBubble(drawScope, cx, cy, r, type.color, showSymbols, alpha)
+                    if (type.locked) drawChains(drawScope, cx, cy, r, alpha)
+                }
+                is BubbleType.BlackVoid -> drawBlackVoidBubble(drawScope, cx, cy, r, alpha)
+                is BubbleType.Mystery -> drawMysteryBubble(drawScope, cx, cy, r, alpha)
+                is BubbleType.Glitch -> {
+                    val color = type.colors.getOrNull(type.activeIndex) ?: BubbleColor.ELECTRIC_BLUE
+                    drawNormalBubble(drawScope, cx, cy, r, color, showSymbols, alpha, isGlitch = true)
+                }
+                is BubbleType.StarTrapped -> drawStarTrappedBubble(drawScope, cx, cy, r, alpha)
             }
-            is BubbleType.BlackVoid -> drawBlackVoidBubble(drawScope, cx, cy, r, alpha)
-            is BubbleType.Mystery -> drawMysteryBubble(drawScope, cx, cy, r, alpha)
-            is BubbleType.Glitch -> {
-                val color = type.colors.getOrNull(type.activeIndex) ?: BubbleColor.ELECTRIC_BLUE
-                drawNormalBubble(drawScope, cx, cy, r, color, showSymbols, alpha, isGlitch = true)
-            }
-            is BubbleType.StarTrapped -> drawStarTrappedBubble(drawScope, cx, cy, r, alpha)
-        }
+        } catch (_: Throwable) {}
     }
 
     private fun drawNormalBubble(
@@ -439,85 +441,92 @@ object BubbleRenderer {
      */
     fun drawTrajectory(drawScope: DrawScope, ray: TrajectoryRay, bubbleRadius: Float, aimColor: Color) {
         if (ray.points.size < 2) return
+        try {
+            // Draw segmented glowing dots
+            val pulseColor = aimColor.copy(alpha = 0.85f)
+            val dotRadius = bubbleRadius * 0.18f
 
-        // Draw segmented glowing dots
-        val pulseColor = aimColor.copy(alpha = 0.85f)
-        val dotRadius = bubbleRadius * 0.18f
+            for (i in 0 until ray.points.size - 1) {
+                val p1 = ray.points[i]
+                val p2 = ray.points[i + 1]
+                val dx = p2.x - p1.x
+                val dy = p2.y - p1.y
+                val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+                val step = bubbleRadius * 0.75f
+                val count = (dist / step).toInt().coerceAtLeast(1)
 
-        for (i in 0 until ray.points.size - 1) {
-            val p1 = ray.points[i]
-            val p2 = ray.points[i + 1]
-            val dx = p2.x - p1.x
-            val dy = p2.y - p1.y
-            val dist = kotlin.math.sqrt(dx * dx + dy * dy)
-            val step = bubbleRadius * 0.75f
-            val count = (dist / step).toInt().coerceAtLeast(1)
+                for (s in 0..count) {
+                    val t = s.toFloat() / count
+                    val x = p1.x + dx * t
+                    val y = p1.y + dy * t
 
-            for (s in 0..count) {
-                val t = s.toFloat() / count
-                val x = p1.x + dx * t
-                val y = p1.y + dy * t
-
-                drawScope.drawCircle(
-                    color = pulseColor,
-                    radius = dotRadius,
-                    center = Offset(x, y)
-                )
+                    drawScope.drawCircle(
+                        color = pulseColor,
+                        radius = dotRadius,
+                        center = Offset(x, y)
+                    )
+                }
             }
-        }
 
-        // Target reticle at predicted destination
-        val lastPoint = ray.points.last()
-        drawScope.drawCircle(
-            color = Color.White.copy(alpha = 0.9f),
-            radius = bubbleRadius * 0.95f,
-            center = Offset(lastPoint.x, lastPoint.y),
-            style = Stroke(width = bubbleRadius * 0.1f)
-        )
-        drawScope.drawCircle(
-            color = aimColor.copy(alpha = 0.45f),
-            radius = bubbleRadius * 0.45f,
-            center = Offset(lastPoint.x, lastPoint.y)
-        )
+            // Target reticle at predicted destination
+            val lastPoint = ray.points.last()
+            drawScope.drawCircle(
+                color = Color.White.copy(alpha = 0.9f),
+                radius = bubbleRadius * 0.95f,
+                center = Offset(lastPoint.x, lastPoint.y),
+                style = Stroke(width = bubbleRadius * 0.1f)
+            )
+            drawScope.drawCircle(
+                color = aimColor.copy(alpha = 0.45f),
+                radius = bubbleRadius * 0.45f,
+                center = Offset(lastPoint.x, lastPoint.y)
+            )
+        } catch (_: Throwable) {}
     }
 
     /**
      * Renders particles (sparks, stars, smoke).
      */
     fun drawParticles(drawScope: DrawScope, particles: List<Particle>) {
-        for (p in particles) {
-            if (p.alpha <= 0.01f) continue
-            val c = p.color.copy(alpha = p.alpha)
-            drawScope.drawCircle(c, radius = p.size, center = Offset(p.x, p.y))
-        }
+        try {
+            for (p in particles) {
+                if (p.alpha <= 0.01f) continue
+                val c = p.color.copy(alpha = p.alpha)
+                drawScope.drawCircle(c, radius = p.size, center = Offset(p.x, p.y))
+            }
+        } catch (_: Throwable) {}
     }
 
     /**
      * Renders falling detached bubbles.
      */
     fun drawFallingBubbles(drawScope: DrawScope, bubbles: List<FallingBubble>, showSymbols: Boolean) {
-        for (fb in bubbles) {
-            drawBubble(drawScope, fb.x, fb.y, fb.size, fb.type, showSymbols, scale = 1f, alpha = fb.alpha)
-        }
+        try {
+            for (fb in bubbles) {
+                drawBubble(drawScope, fb.x, fb.y, fb.size, fb.type, showSymbols, scale = 1f, alpha = fb.alpha)
+            }
+        } catch (_: Throwable) {}
     }
 
     /**
      * Renders floating score & combo popups.
      */
     fun drawFloatingTexts(drawScope: DrawScope, texts: List<FloatingText>) {
-        for (ft in texts) {
-            if (ft.alpha <= 0.01f) continue
-            // Render text marker circle glow
-            drawScope.drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(ft.color.copy(alpha = ft.alpha * 0.5f), Color.Transparent),
-                    center = Offset(ft.x, ft.y),
-                    radius = 28f * ft.scale
-                ),
-                radius = 28f * ft.scale,
-                center = Offset(ft.x, ft.y)
-            )
-        }
+        try {
+            for (ft in texts) {
+                if (ft.alpha <= 0.01f) continue
+                // Render text marker circle glow
+                drawScope.drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(ft.color.copy(alpha = ft.alpha * 0.5f), Color.Transparent),
+                        center = Offset(ft.x, ft.y),
+                        radius = 28f * ft.scale
+                    ),
+                    radius = 28f * ft.scale,
+                    center = Offset(ft.x, ft.y)
+                )
+            }
+        } catch (_: Throwable) {}
     }
 
     /**

@@ -24,6 +24,8 @@ import com.example.neonpop.model.ParticleType
 import com.example.neonpop.model.TrajectoryRay
 import com.example.neonpop.physics.HexGridPhysics
 import com.example.neonpop.security.AntiCheatGuard
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -93,9 +95,22 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     // 2D grid of bubble cells
     var grid: Array<Array<BubbleCell?>> = Array(physics.maxRows) { arrayOfNulls(physics.evenCols) }
+    val entityLock = Any()
     val fallingBubbles = mutableListOf<FallingBubble>()
     val particles = mutableListOf<Particle>()
     val floatingTexts = mutableListOf<FloatingText>()
+
+    fun getFallingBubblesSnapshot(): List<FallingBubble> = synchronized(entityLock) { ArrayList(fallingBubbles) }
+    fun getParticlesSnapshot(): List<Particle> = synchronized(entityLock) { ArrayList(particles) }
+    fun getFloatingTextsSnapshot(): List<FloatingText> = synchronized(entityLock) { ArrayList(floatingTexts) }
+
+    fun getCellSafe(r: Int, c: Int): BubbleCell? {
+        val currentGrid = grid
+        if (r in currentGrid.indices && c in currentGrid[r].indices) {
+            return currentGrid[r][c]
+        }
+        return null
+    }
 
     private var gameLoopJob: Job? = null
     private val random = Random()
@@ -110,6 +125,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private var successfulHitsCount = 0
     private var totalBubblesPoppedCount = 0
     private var maxComboAchieved = 0
+
+    private val crashHandler = CoroutineExceptionHandler { _, throwable ->
+        android.util.Log.e("GameViewModel", "Recovered from coroutine error: ${throwable.message}", throwable)
+        _uiState.value = _uiState.value.copy(projectile = null)
+        startGameLoop()
+    }
 
     init {
         soundEngine.sfxEnabled = saveManager.sfxEnabled
@@ -202,9 +223,11 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
         // Reset grid
         grid = Array(physics.maxRows) { arrayOfNulls(physics.evenCols) }
-        fallingBubbles.clear()
-        particles.clear()
-        floatingTexts.clear()
+        synchronized(entityLock) {
+            fallingBubbles.clear()
+            particles.clear()
+            floatingTexts.clear()
+        }
 
         var starCount = 0
         for (r in config.gridLayout.indices) {
@@ -312,21 +335,29 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onTapShoot(touchX: Float, touchY: Float) {
-        if (_uiState.value.projectile != null) return
-        val dx = touchX - launcherX
-        val dy = (touchY - launcherY).coerceAtMost(-15f)
+        try {
+            if (_uiState.value.projectile != null) return
+            val dx = touchX - launcherX
+            val dy = (touchY - launcherY).coerceAtMost(-15f)
 
-        var angle = atan2(dy, dx)
-        angle = AntiCheatGuard.sanitizeAimAngle(angle)
+            var angle = atan2(dy, dx)
+            angle = AntiCheatGuard.sanitizeAimAngle(angle)
 
-        _uiState.value = _uiState.value.copy(aimAngleRad = angle)
-        shootBubble(angle)
+            _uiState.value = _uiState.value.copy(aimAngleRad = angle)
+            shootBubble(angle)
+        } catch (t: Throwable) {
+            android.util.Log.e("GameViewModel", "onTapShoot safe recovery: ${t.message}", t)
+        }
     }
 
     fun onAimRelease() {
-        if (_uiState.value.projectile != null) return
-        val angle = _uiState.value.aimAngleRad
-        shootBubble(angle)
+        try {
+            if (_uiState.value.projectile != null) return
+            val angle = _uiState.value.aimAngleRad
+            shootBubble(angle)
+        } catch (t: Throwable) {
+            android.util.Log.e("GameViewModel", "onAimRelease safe recovery: ${t.message}", t)
+        }
     }
 
     private fun shootBubble(angleRad: Float) {
@@ -364,12 +395,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    // Central 60fps Loop
+    // Central 60fps Loop with crash immunity
     private fun startGameLoop() {
         gameLoopJob?.cancel()
-        gameLoopJob = viewModelScope.launch {
+        gameLoopJob = viewModelScope.launch(Dispatchers.Default + crashHandler) {
             while (isActive) {
-                updatePhysics()
+                try {
+                    updatePhysics()
+                } catch (t: Throwable) {
+                    android.util.Log.e("GameViewModel", "Physics loop exception safely recovered: ${t.message}", t)
+                }
                 delay(16L) // ~60 FPS
             }
         }
@@ -434,49 +469,51 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // 2. Update Falling detached bubbles (skip iterator allocation if empty)
-        if (fallingBubbles.isNotEmpty()) {
-            val fallIterator = fallingBubbles.iterator()
-            while (fallIterator.hasNext()) {
-                val fb = fallIterator.next()
-                fb.vy += 0.85f * timeScale // gravity
-                fb.x += fb.vx * timeScale
-                fb.y += fb.vy * timeScale
-                fb.rotation += fb.vRot * timeScale
-                fb.alpha = (fb.alpha - 0.015f * timeScale).coerceAtLeast(0f)
+        synchronized(entityLock) {
+            // 2. Update Falling detached bubbles (skip iterator allocation if empty)
+            if (fallingBubbles.isNotEmpty()) {
+                val fallIterator = fallingBubbles.iterator()
+                while (fallIterator.hasNext()) {
+                    val fb = fallIterator.next()
+                    fb.vy += 0.85f * timeScale // gravity
+                    fb.x += fb.vx * timeScale
+                    fb.y += fb.vy * timeScale
+                    fb.rotation += fb.vRot * timeScale
+                    fb.alpha = (fb.alpha - 0.015f * timeScale).coerceAtLeast(0f)
 
-                if (fb.y > boardHeight + 100f || fb.alpha <= 0.01f) {
-                    fallIterator.remove()
+                    if (fb.y > boardHeight + 100f || fb.alpha <= 0.01f) {
+                        fallIterator.remove()
+                    }
                 }
             }
-        }
 
-        // 3. Update Particles (skip iterator allocation if empty)
-        if (particles.isNotEmpty()) {
-            val pIter = particles.iterator()
-            while (pIter.hasNext()) {
-                val p = pIter.next()
-                p.currentLife += 0.035f * timeScale
-                p.x += p.vx * timeScale
-                p.y += p.vy * timeScale
-                p.vy += 0.25f * timeScale // slight gravity
-                p.alpha = (1f - (p.currentLife / p.maxLife)).coerceIn(0f, 1f)
-                if (p.currentLife >= p.maxLife || p.alpha <= 0.01f) {
-                    pIter.remove()
+            // 3. Update Particles (skip iterator allocation if empty)
+            if (particles.isNotEmpty()) {
+                val pIter = particles.iterator()
+                while (pIter.hasNext()) {
+                    val p = pIter.next()
+                    p.currentLife += 0.035f * timeScale
+                    p.x += p.vx * timeScale
+                    p.y += p.vy * timeScale
+                    p.vy += 0.25f * timeScale // slight gravity
+                    p.alpha = (1f - (p.currentLife / p.maxLife)).coerceIn(0f, 1f)
+                    if (p.currentLife >= p.maxLife || p.alpha <= 0.01f) {
+                        pIter.remove()
+                    }
                 }
             }
-        }
 
-        // 4. Update Floating Texts (skip iterator allocation if empty)
-        if (floatingTexts.isNotEmpty()) {
-            val ftIter = floatingTexts.iterator()
-            while (ftIter.hasNext()) {
-                val ft = ftIter.next()
-                ft.y += ft.vy * timeScale
-                ft.life -= 0.025f * timeScale
-                ft.alpha = ft.life.coerceIn(0f, 1f)
-                if (ft.life <= 0f) {
-                    ftIter.remove()
+            // 4. Update Floating Texts (skip iterator allocation if empty)
+            if (floatingTexts.isNotEmpty()) {
+                val ftIter = floatingTexts.iterator()
+                while (ftIter.hasNext()) {
+                    val ft = ftIter.next()
+                    ft.y += ft.vy * timeScale
+                    ft.life -= 0.025f * timeScale
+                    ft.alpha = ft.life.coerceIn(0f, 1f)
+                    if (ft.life <= 0f) {
+                        ftIter.remove()
+                    }
                 }
             }
         }
@@ -495,6 +532,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun onProjectileSnap(row: Int, col: Int, proj: ActiveProjectile) {
         _uiState.value = _uiState.value.copy(projectile = null)
+        if (row !in grid.indices || col !in grid[row].indices) {
+            checkLevelProgress()
+            return
+        }
         val cell = BubbleCell(row = row, col = col, type = proj.type)
         grid[row][col] = cell
 
@@ -519,10 +560,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 // Rainbow clears touching group
                 val neighbors = physics.getNeighbors(row, col)
                 val targetColor = neighbors.mapNotNull {
-                    when (val nt = grid[it.first][it.second]?.type) {
-                        is BubbleType.Normal -> nt.color
-                        else -> null
-                    }
+                    if (it.first in grid.indices && it.second in grid[it.first].indices) {
+                        when (val nt = grid[it.first][it.second]?.type) {
+                            is BubbleType.Normal -> nt.color
+                            else -> null
+                        }
+                    } else null
                 }.firstOrNull() ?: BubbleColor.ELECTRIC_BLUE
                 grid[row][col] = BubbleCell(row, col, BubbleType.Normal(targetColor))
             }
@@ -567,18 +610,20 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 droppedCount++
                 totalBubblesPoppedCount++
 
-                fallingBubbles.add(
-                    FallingBubble(
-                        x = ox,
-                        y = oy,
-                        vx = (random.nextFloat() * 8f - 4f),
-                        vy = (random.nextFloat() * -3f - 2f),
-                        rotation = 0f,
-                        vRot = (random.nextFloat() * 0.15f - 0.075f),
-                        type = orphan.type,
-                        size = radius
+                synchronized(entityLock) {
+                    fallingBubbles.add(
+                        FallingBubble(
+                            x = ox,
+                            y = oy,
+                            vx = (random.nextFloat() * 8f - 4f),
+                            vy = (random.nextFloat() * -3f - 2f),
+                            rotation = 0f,
+                            vRot = (random.nextFloat() * 0.15f - 0.075f),
+                            type = orphan.type,
+                            size = radius
+                        )
                     )
-                )
+                }
             }
 
             val orphanBonus = droppedCount * 250
@@ -611,14 +656,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
 
             // Floating Text
-            floatingTexts.add(
-                FloatingText(
-                    text = "+$totalEarned",
-                    x = cx,
-                    y = cy,
-                    color = Color(0xFFFFDE00)
+            synchronized(entityLock) {
+                floatingTexts.add(
+                    FloatingText(
+                        text = "+$totalEarned",
+                        x = cx,
+                        y = cy,
+                        color = Color(0xFFFFDE00)
+                    )
                 )
-            )
+            }
 
             // Boss Damage
             var curBossHp = _uiState.value.bossHp
@@ -661,7 +708,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             for (dc in -2..2) {
                 val nr = centerR + dr
                 val nc = centerC + dc
-                if (nr in 0 until physics.maxRows && nc in 0 until physics.getColsForRow(nr)) {
+                if (nr in grid.indices && nc in grid[nr].indices) {
                     if (grid[nr][nc] != null) {
                         popped.add(Pair(nr, nc))
                     }
@@ -670,14 +717,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         for ((r, c) in popped) {
-            val cell = grid[r][c] ?: continue
+            val cell = if (r in grid.indices && c in grid[r].indices) grid[r][c] else null ?: continue
             val (bx, by) = physics.getBubbleCenter(r, c, radius, 0f, gridTop)
             spawnPopParticles(bx, by, Color(0xFFFF5252))
             grid[r][c] = null
             totalBubblesPoppedCount++
         }
 
-        floatingTexts.add(FloatingText("BOOM! +${popped.size * 200}", cx, cy, Color(0xFFFF5252)))
+        synchronized(entityLock) {
+            floatingTexts.add(FloatingText("BOOM! +${popped.size * 200}", cx, cy, Color(0xFFFF5252)))
+        }
         _uiState.value = _uiState.value.copy(
             score = _uiState.value.score + popped.size * 200,
             screenShake = 15f
@@ -686,9 +735,10 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun spawnLightningClear(row: Int, cx: Float, cy: Float) {
+        if (row !in grid.indices) return
         val radius = physics.getBubbleRadius(boardWidth)
         var count = 0
-        for (c in 0 until physics.getColsForRow(row)) {
+        for (c in grid[row].indices) {
             val cell = grid[row][c]
             if (cell != null) {
                 val (bx, by) = physics.getBubbleCenter(row, c, radius, 0f, gridTop)
@@ -698,7 +748,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 totalBubblesPoppedCount++
             }
         }
-        floatingTexts.add(FloatingText("LASER! +${count * 250}", cx, cy, Color(0xFFFFDE00)))
+        synchronized(entityLock) {
+            floatingTexts.add(FloatingText("LASER! +${count * 250}", cx, cy, Color(0xFFFFDE00)))
+        }
         _uiState.value = _uiState.value.copy(
             score = _uiState.value.score + count * 250,
             screenShake = 12f
@@ -711,7 +763,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val neighbors = physics.getNeighbors(centerR, centerC) + listOf(Pair(centerR, centerC))
         var count = 0
         for ((r, c) in neighbors) {
-            if (grid[r][c] != null) {
+            if (r in grid.indices && c in grid[r].indices && grid[r][c] != null) {
                 val (bx, by) = physics.getBubbleCenter(r, c, radius, 0f, gridTop)
                 spawnPopParticles(bx, by, Color(0xFF00E5FF))
                 grid[r][c] = null
@@ -719,7 +771,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 totalBubblesPoppedCount++
             }
         }
-        floatingTexts.add(FloatingText("FROST! +${count * 180}", cx, cy, Color(0xFF00E5FF)))
+        synchronized(entityLock) {
+            floatingTexts.add(FloatingText("FROST! +${count * 180}", cx, cy, Color(0xFF00E5FF)))
+        }
         _uiState.value = _uiState.value.copy(score = _uiState.value.score + count * 180)
         checkLevelProgress()
     }
@@ -815,40 +869,44 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun spawnPopParticles(x: Float, y: Float, color: Color) {
         val count = 12
-        for (i in 0 until count) {
-            val angle = (2.0 * PI * i / count).toFloat()
-            val speed = random.nextFloat() * 6f + 2f
-            particles.add(
-                Particle(
-                    x = x,
-                    y = y,
-                    vx = cos(angle) * speed,
-                    vy = sin(angle) * speed,
-                    color = color,
-                    size = random.nextFloat() * 5f + 3f,
-                    alpha = 1f,
-                    maxLife = 0.5f,
-                    type = ParticleType.SPARK
+        synchronized(entityLock) {
+            for (i in 0 until count) {
+                val angle = (2.0 * PI * i / count).toFloat()
+                val speed = random.nextFloat() * 6f + 2f
+                particles.add(
+                    Particle(
+                        x = x,
+                        y = y,
+                        vx = cos(angle) * speed,
+                        vy = sin(angle) * speed,
+                        color = color,
+                        size = random.nextFloat() * 5f + 3f,
+                        alpha = 1f,
+                        maxLife = 0.5f,
+                        type = ParticleType.SPARK
+                    )
                 )
-            )
+            }
         }
     }
 
     private fun spawnSparks(x: Float, y: Float, color: Color, count: Int) {
-        for (i in 0 until count) {
-            particles.add(
-                Particle(
-                    x = x,
-                    y = y,
-                    vx = (random.nextFloat() * 4f - 2f),
-                    vy = (random.nextFloat() * -3f - 1f),
-                    color = color,
-                    size = 3f,
-                    alpha = 1f,
-                    maxLife = 0.35f,
-                    type = ParticleType.SPARK
+        synchronized(entityLock) {
+            for (i in 0 until count) {
+                particles.add(
+                    Particle(
+                        x = x,
+                        y = y,
+                        vx = (random.nextFloat() * 4f - 2f),
+                        vy = (random.nextFloat() * -3f - 1f),
+                        color = color,
+                        size = 3f,
+                        alpha = 1f,
+                        maxLife = 0.35f,
+                        type = ParticleType.SPARK
+                    )
                 )
-            )
+            }
         }
     }
 

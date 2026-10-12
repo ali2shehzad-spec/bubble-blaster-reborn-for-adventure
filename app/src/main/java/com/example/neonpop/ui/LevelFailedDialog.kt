@@ -14,7 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
@@ -61,11 +64,14 @@ fun LevelFailedDialog(
             color = Color(0xFF150B20),
             border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFFF5252).copy(alpha = 0.8f)),
             modifier = Modifier
+                .widthIn(max = 480.dp)
                 .fillMaxWidth(0.88f)
                 .padding(16.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Bubble Dragon mascot shocked

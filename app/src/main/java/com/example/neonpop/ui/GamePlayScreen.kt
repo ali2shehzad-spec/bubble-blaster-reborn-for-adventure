@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -93,7 +95,7 @@ fun GamePlayScreen(
         }
     }
 
-    BoxWithConstraints(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(
@@ -104,17 +106,24 @@ fun GamePlayScreen(
                         uiState.levelConfig.backgroundColors
                     }
                 )
-            )
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        val density = LocalDensity.current
-        val boardW = constraints.maxWidth.toFloat()
-        val boardH = constraints.maxHeight.toFloat()
-        val topOffset = with(density) { 135.dp.toPx() }
-        val launcherY = boardH - with(density) { 80.dp.toPx() }
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = 560.dp)
+                .fillMaxWidth()
+        ) {
+            val density = LocalDensity.current
+            val boardW = constraints.maxWidth.toFloat()
+            val boardH = constraints.maxHeight.toFloat()
+            val topOffset = minOf(with(density) { 135.dp.toPx() }, boardH * 0.18f)
+            val launcherY = boardH - with(density) { 80.dp.toPx() }
 
-        LaunchedEffect(boardW, boardH, topOffset, launcherY) {
-            viewModel.setBoardDimensions(boardW, boardH, topOffset, launcherY)
-        }
+            LaunchedEffect(boardW, boardH, topOffset, launcherY) {
+                viewModel.setBoardDimensions(boardW, boardH, topOffset, launcherY)
+            }
 
         // 1. Main Game Board Canvas
         Canvas(
@@ -122,22 +131,24 @@ fun GamePlayScreen(
                 .fillMaxSize()
                 .testTag("game_board_canvas")
                 .pointerInput(launcherY) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        viewModel.onAimDrag(down.position.x, down.position.y)
-                        var isReleased = false
-                        while (!isReleased) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id }
-                            if (change == null || !change.pressed) {
-                                isReleased = true
-                                viewModel.onAimRelease()
-                            } else {
-                                change.consume()
-                                viewModel.onAimDrag(change.position.x, change.position.y)
+                    try {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            viewModel.onAimDrag(down.position.x, down.position.y)
+                            var isReleased = false
+                            while (!isReleased) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id }
+                                if (change == null || !change.pressed) {
+                                    isReleased = true
+                                    viewModel.onAimRelease()
+                                } else {
+                                    change.consume()
+                                    viewModel.onAimDrag(change.position.x, change.position.y)
+                                }
                             }
                         }
-                    }
+                    } catch (_: Throwable) {}
                 }
         ) {
             // Read frame tick to force redraw on every vsync
@@ -178,7 +189,7 @@ fun GamePlayScreen(
             for (r in 0 until viewModel.physics.maxRows) {
                 val cols = viewModel.physics.getColsForRow(r)
                 for (c in 0 until cols) {
-                    val cell = viewModel.grid[r][c] ?: continue
+                    val cell = viewModel.getCellSafe(r, c) ?: continue
                     val (bx, by) = viewModel.physics.getBubbleCenter(r, c, radius, 0f, topOffset)
                     BubbleRenderer.drawBubble(
                         this,
@@ -241,14 +252,14 @@ fun GamePlayScreen(
                 )
             }
 
-            // Draw Falling Detached Bubbles
-            BubbleRenderer.drawFallingBubbles(this, viewModel.fallingBubbles, colorblindEnabled)
+            // Draw Falling Detached Bubbles (Thread-safe snapshot)
+            BubbleRenderer.drawFallingBubbles(this, viewModel.getFallingBubblesSnapshot(), colorblindEnabled)
 
-            // Draw Particles (Sparks, stars, pops)
-            BubbleRenderer.drawParticles(this, viewModel.particles)
+            // Draw Particles (Sparks, stars, pops - Thread-safe snapshot)
+            BubbleRenderer.drawParticles(this, viewModel.getParticlesSnapshot())
 
-            // Draw Floating Texts
-            BubbleRenderer.drawFloatingTexts(this, viewModel.floatingTexts)
+            // Draw Floating Texts (Thread-safe snapshot)
+            BubbleRenderer.drawFloatingTexts(this, viewModel.getFloatingTextsSnapshot())
         }
 
         // 2. Left Center Remaining Balloons Bubble / Button (Requirement 6)
@@ -617,6 +628,7 @@ fun GamePlayScreen(
             }
         }
     }
+}
 }
 
 @Composable

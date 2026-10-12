@@ -75,4 +75,25 @@ class ExampleRobolectricTest {
     val isForgedValid = com.example.neonpop.security.AntiCheatGuard.verifySaveIntegrity(10, 999999, 500, 0, sig)
     org.junit.Assert.assertFalse(isForgedValid)
   }
+
+  @Test
+  fun `test crash-proof physics boundary safe checks`() {
+    val physics = com.example.neonpop.physics.HexGridPhysics(maxRows = 16, evenCols = 8, oddCols = 7)
+    val grid: Array<Array<com.example.neonpop.model.BubbleCell?>> = Array(16) { arrayOfNulls(8) }
+
+    // Test out of bounds access doesn't throw ArrayIndexOutOfBoundsException
+    val safeCell = physics.getCellSafe(grid, 99, 99)
+    org.junit.Assert.assertNull(safeCell)
+
+    val safeNegative = physics.getCellSafe(grid, -1, -5)
+    org.junit.Assert.assertNull(safeNegative)
+
+    // Test finding hits with empty grid doesn't crash
+    val hit = physics.findHitBubble(100f, 100f, 30f, 0f, 100f, grid)
+    org.junit.Assert.assertNull(hit)
+
+    // Test floating clusters with empty grid returns empty set without crashing
+    val clusters = physics.findFloatingClusters(grid)
+    org.junit.Assert.assertTrue(clusters.isEmpty())
+  }
 }

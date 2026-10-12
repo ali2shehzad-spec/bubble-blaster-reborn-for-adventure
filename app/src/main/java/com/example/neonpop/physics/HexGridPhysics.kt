@@ -32,6 +32,13 @@ class HexGridPhysics(
         return radius * rowHeightFactor
     }
 
+    fun getCellSafe(grid: Array<Array<BubbleCell?>>, r: Int, c: Int): BubbleCell? {
+        if (r in grid.indices && c in grid[r].indices) {
+            return grid[r][c]
+        }
+        return null
+    }
+
     fun getBubbleCenter(row: Int, col: Int, radius: Float, gridLeft: Float, gridTop: Float): Pair<Float, Float> {
         val y = gridTop + radius + row * getRowHeight(radius)
         val x = if (row % 2 == 0) {
@@ -180,8 +187,8 @@ class HexGridPhysics(
         grid: Array<Array<BubbleCell?>>
     ): Pair<Int, Int>? {
         val hitDistanceSq = (radius * 1.85f) * (radius * 1.85f)
-        for (r in 0 until maxRows) {
-            val cols = getColsForRow(r)
+        for (r in grid.indices) {
+            val cols = getColsForRow(r).coerceAtMost(grid[r].size)
             for (c in 0 until cols) {
                 val cell = grid[r][c] ?: continue
                 if (cell.isPopping || cell.isFalling) continue
@@ -214,7 +221,7 @@ class HexGridPhysics(
         var bestDistSq = Float.MAX_VALUE
 
         for ((nr, nc) in neighbors) {
-            if (grid[nr][nc] == null) {
+            if (nr in grid.indices && nc in grid[nr].indices && grid[nr][nc] == null) {
                 val (cx, cy) = getBubbleCenter(nr, nc, radius, gridLeft, gridTop)
                 val dx = px - cx
                 val dy = py - cy
@@ -241,13 +248,15 @@ class HexGridPhysics(
         var bestPair: Pair<Int, Int>? = null
         var bestDistSq = Float.MAX_VALUE
 
-        for (r in 0 until maxRows) {
-            val cols = getColsForRow(r)
+        for (r in grid.indices) {
+            val cols = getColsForRow(r).coerceAtMost(grid[r].size)
             for (c in 0 until cols) {
                 if (grid[r][c] == null) {
                     // Must be connected to ceiling or to another bubble
                     val isAtCeiling = r == 0
-                    val hasNeighbor = getNeighbors(r, c).any { grid[it.first][it.second] != null }
+                    val hasNeighbor = getNeighbors(r, c).any { (nr, nc) ->
+                        nr in grid.indices && nc in grid[nr].indices && grid[nr][nc] != null
+                    }
                     if (isAtCeiling || hasNeighbor) {
                         val (cx, cy) = getBubbleCenter(r, c, radius, gridLeft, gridTop)
                         val dx = px - cx
@@ -272,7 +281,7 @@ class HexGridPhysics(
         startCol: Int,
         grid: Array<Array<BubbleCell?>>
     ): Set<Pair<Int, Int>> {
-        val startCell = grid[startRow][startCol] ?: return emptySet()
+        val startCell = getCellSafe(grid, startRow, startCol) ?: return emptySet()
         val targetColor = when (val t = startCell.type) {
             is BubbleType.Normal -> t.color
             is BubbleType.Paint -> t.color
@@ -288,7 +297,7 @@ class HexGridPhysics(
         while (queue.isNotEmpty()) {
             val (r, c) = queue.removeFirst()
             for ((nr, nc) in getNeighbors(r, c)) {
-                val neighborCell = grid[nr][nc] ?: continue
+                val neighborCell = getCellSafe(grid, nr, nc) ?: continue
                 if (visited.contains(Pair(nr, nc))) continue
                 if (neighborCell.isPopping || neighborCell.isFalling) continue
 
@@ -318,8 +327,11 @@ class HexGridPhysics(
         val connectedToCeiling = mutableSetOf<Pair<Int, Int>>()
         val queue = ArrayDeque<Pair<Int, Int>>()
 
+        if (grid.isEmpty()) return emptySet()
+
         // Enqueue all active bubbles in row 0
-        for (c in 0 until getColsForRow(0)) {
+        val topCols = getColsForRow(0).coerceAtMost(grid[0].size)
+        for (c in 0 until topCols) {
             val cell = grid[0][c]
             if (cell != null && !cell.isPopping && !cell.isFalling) {
                 connectedToCeiling.add(Pair(0, c))
@@ -331,7 +343,7 @@ class HexGridPhysics(
         while (queue.isNotEmpty()) {
             val (r, c) = queue.removeFirst()
             for ((nr, nc) in getNeighbors(r, c)) {
-                val neighbor = grid[nr][nc]
+                val neighbor = getCellSafe(grid, nr, nc)
                 if (neighbor != null && !neighbor.isPopping && !neighbor.isFalling) {
                     if (connectedToCeiling.add(Pair(nr, nc))) {
                         queue.add(Pair(nr, nc))
@@ -342,8 +354,9 @@ class HexGridPhysics(
 
         // Any active bubble not connected to ceiling is floating!
         val floating = mutableSetOf<Pair<Int, Int>>()
-        for (r in 0 until maxRows) {
-            for (c in 0 until getColsForRow(r)) {
+        for (r in grid.indices) {
+            val cols = getColsForRow(r).coerceAtMost(grid[r].size)
+            for (c in 0 until cols) {
                 val cell = grid[r][c]
                 if (cell != null && !cell.isPopping && !cell.isFalling) {
                     if (!connectedToCeiling.contains(Pair(r, c))) {

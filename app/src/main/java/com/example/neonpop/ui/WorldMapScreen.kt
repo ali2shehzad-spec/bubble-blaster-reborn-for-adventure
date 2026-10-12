@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -93,17 +95,24 @@ fun WorldMapScreen(
     val gridState = rememberLazyGridState()
     val coroutineScope = rememberCoroutineScope()
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
                     listOf(Color(0xFF0C0721), Color(0xFF1B0D38), Color(0xFF070414))
                 )
-            )
-            .statusBarsPadding()
-            .navigationBarsPadding()
+            ),
+        contentAlignment = Alignment.TopCenter
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .widthIn(max = 680.dp)
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
         // Top Navigation Header
         Row(
             modifier = Modifier
@@ -251,7 +260,7 @@ fun WorldMapScreen(
 
         // Circular Levels Grid with Numbers
         LazyVerticalGrid(
-            columns = GridCells.Fixed(5),
+            columns = GridCells.Adaptive(minSize = 58.dp),
             state = gridState,
             modifier = Modifier
                 .fillMaxSize()
@@ -283,6 +292,7 @@ fun WorldMapScreen(
             }
         }
     }
+}
 }
 
 /**

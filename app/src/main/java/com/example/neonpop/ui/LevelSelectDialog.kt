@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -81,8 +83,9 @@ fun LevelSelectDialog(
             color = Color(0xFF120826),
             border = androidx.compose.foundation.BorderStroke(2.dp, Color(0xFF00E5FF).copy(alpha = 0.8f)),
             modifier = Modifier
+                .widthIn(max = 640.dp)
                 .fillMaxWidth(0.95f)
-                .fillMaxSize(0.92f)
+                .fillMaxHeight(0.92f)
                 .padding(8.dp)
         ) {
             Column(
@@ -169,9 +172,9 @@ fun LevelSelectDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // 5-Column Grid of Circles with Numbers (1..300)
+                // Grid of Circles with Numbers (1..300)
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(5),
+                    columns = GridCells.Adaptive(minSize = 54.dp),
                     state = gridState,
                     contentPadding = PaddingValues(bottom = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
