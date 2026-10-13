@@ -119,7 +119,7 @@ fun LevelSelectDialog(
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(48.dp)
                             .background(Color.White.copy(alpha = 0.12f), CircleShape)
                             .testTag("close_level_select_button")
                     ) {
@@ -127,7 +127,7 @@ fun LevelSelectDialog(
                             Icons.Default.Close,
                             contentDescription = "Close",
                             tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }

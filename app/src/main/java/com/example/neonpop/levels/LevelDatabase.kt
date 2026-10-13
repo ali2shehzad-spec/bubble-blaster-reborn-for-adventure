@@ -69,8 +69,8 @@ object LevelDatabase {
 
     private fun generateLevel(levelNumber: Int): LevelConfig {
         val worldId = (((levelNumber - 1) / 38) + 1).coerceIn(1, 8)
-        // Rule: first 20 levels have 10 shots; after 20 levels have 20 shots!
-        val maxShots = if (levelNumber <= 20) 10 else 20
+        // Rule: first 15 rounds have 10 shots; after 15th round exceeds from 10 to 20 shots!
+        val maxShots = if (levelNumber <= 15) 10 else 20
 
         val isBoss = levelNumber % 10 == 0
         val isRescue = !isBoss && (levelNumber % 4 == 3)

@@ -24,12 +24,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -117,7 +115,7 @@ fun HomeScreen(
                 IconButton(
                     onClick = { viewModel.navigateTo(GameScreen.SETTINGS) },
                     modifier = Modifier
-                        .size(46.dp)
+                        .size(48.dp)
                         .background(Color.White.copy(alpha = 0.12f), CircleShape)
                         .testTag("home_settings_button")
                 ) {
@@ -419,93 +417,37 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Quick Architecture Features Navigation
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // Worlds Map Exploration
+            Button(
+                onClick = { viewModel.navigateTo(GameScreen.WORLD_MAP) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .testTag("home_nav_worlds"),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White.copy(alpha = 0.08f)
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF00E5FF).copy(alpha = 0.6f))
             ) {
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color.White.copy(alpha = 0.08f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f)),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                        .clickable { viewModel.navigateTo(GameScreen.WORLD_MAP) }
-                        .testTag("home_nav_worlds")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Map, contentDescription = "Worlds", tint = Color(0xFF00E5FF), modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("WORLDS", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color.White.copy(alpha = 0.08f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF25F05D).copy(alpha = 0.5f)),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                        .clickable { viewModel.navigateTo(GameScreen.DAILY_CHALLENGE) }
-                        .testTag("home_nav_daily")
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.DateRange, contentDescription = "Daily", tint = Color(0xFF25F05D), modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("DAILY", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color.White.copy(alpha = 0.08f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFDE00).copy(alpha = 0.5f)),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                        .clickable { viewModel.navigateTo(GameScreen.ACHIEVEMENTS) }
-                        .testTag("home_nav_achievements")
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Star, contentDescription = "Badges", tint = Color(0xFFFFDE00), modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("BADGES", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color.White.copy(alpha = 0.08f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFF2E93).copy(alpha = 0.5f)),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp)
-                        .clickable { viewModel.navigateTo(GameScreen.COSMETICS) }
-                        .testTag("home_nav_wardrobe")
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.ShoppingBag, contentDescription = "Shop", tint = Color(0xFFFF2E93), modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("SHOP", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
+                    Icon(
+                        Icons.Default.Map,
+                        contentDescription = "Worlds",
+                        tint = Color(0xFF00E5FF),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "EXPLORE WORLDS MAP",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = Color.White
+                    )
                 }
             }
 

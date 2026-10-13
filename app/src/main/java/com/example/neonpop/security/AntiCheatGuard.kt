@@ -146,6 +146,13 @@ object AntiCheatGuard {
     fun validateCoinReward(source: String, claimedAmount: Int): Int {
         return when (source) {
             "level_win" -> 10 // Strictly 10 coins per level win
+            "achievement_first_pop" -> 100
+            "achievement_trick_shot" -> 150
+            "achievement_chain_master" -> 250
+            "achievement_fever_mode" -> 300
+            "achievement_boss_slayer" -> 500
+            "achievement_star_collector" -> 400
+            "achievement_bubble_god" -> 350
             "achievement_small" -> 100
             "achievement_medium" -> 150
             "achievement_large" -> 250
@@ -154,7 +161,13 @@ object AntiCheatGuard {
             "achievement_stars" -> 400
             "achievement_mega" -> 350
             "daily_bonus" -> claimedAmount.coerceIn(5, 50)
-            else -> claimedAmount.coerceIn(0, 50)
+            else -> {
+                if (source.startsWith("achievement_")) {
+                    claimedAmount.coerceIn(0, 500)
+                } else {
+                    claimedAmount.coerceIn(0, 50)
+                }
+            }
         }
     }
 

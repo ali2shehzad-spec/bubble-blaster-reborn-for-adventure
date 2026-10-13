@@ -12,10 +12,15 @@
 #   public *;
 #}
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Preserve line numbers and source file names for production crash reports
+-keepattributes SourceFile,LineNumberTable
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Preserve game models and data classes from aggressive obfuscation
+-keep class com.example.neonpop.model.** { *; }
+-keep class com.example.neonpop.data.** { *; }
+
+# Preserve AntiCheat security classes and methods
+-keep class com.example.neonpop.security.** { *; }
+
+# Preserve Room entities if used
+-keep class androidx.room.** { *; }

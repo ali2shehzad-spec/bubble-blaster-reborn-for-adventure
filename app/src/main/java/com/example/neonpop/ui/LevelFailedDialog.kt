@@ -105,13 +105,7 @@ fun LevelFailedDialog(
                     onClick = {
                         if (viewModel.saveManager.coins >= 50) {
                             viewModel.saveManager.coins -= 50
-                            viewModel.apply {
-                                // Resume with +5 shots
-                                uiState.shotsRemaining.let {
-                                    // Give shots
-                                }
-                            }
-                            viewModel.startLevel(levelNum, GameMode.CLASSIC)
+                            viewModel.continueWithExtraShots(5)
                         } else {
                             viewModel.startLevel(levelNum, GameMode.CLASSIC)
                         }
@@ -127,7 +121,7 @@ fun LevelFailedDialog(
                         Icon(Icons.Default.Add, contentDescription = null, tint = Color.Black)
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "RETRY WITH +5 SHOTS (50 🪙)",
+                            text = "CONTINUE WITH +5 SHOTS (50 🪙)",
                             color = Color.Black,
                             fontWeight = FontWeight.Black,
                             fontSize = 13.sp
@@ -164,7 +158,10 @@ fun LevelFailedDialog(
                 // Home Button
                 OutlinedButton(
                     onClick = { viewModel.navigateTo(GameScreen.HOME) },
-                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("fail_home_button"),
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Icon(Icons.Default.Home, contentDescription = "Home", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(16.dp))

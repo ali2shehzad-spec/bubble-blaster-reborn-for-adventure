@@ -259,7 +259,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             comboCount = 0,
             feverProgress = 0f,
             isFeverActive = false,
-            shotsRemaining = if (mode == GameMode.ZEN) 999 else if (config.levelNumber <= 20) 10 else 20,
+            shotsRemaining = if (mode == GameMode.ZEN) 999 else if (config.levelNumber <= 15) 10 else 20,
             timeRemainingSeconds = if (config.timeLimitSeconds > 0) config.timeLimitSeconds else 75,
             starsRescued = 0,
             totalStarsToRescue = starCount,
@@ -277,6 +277,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             totalCoins = saveManager.coins
         )
 
+        soundEngine.playLaunch()
+    }
+
+    fun continueWithExtraShots(shots: Int = 5) {
+        _uiState.value = _uiState.value.copy(
+            shotsRemaining = _uiState.value.shotsRemaining + shots,
+            currentScreen = GameScreen.PLAYING,
+            mascotMood = MascotMood.AIMING,
+            totalCoins = saveManager.coins
+        )
         soundEngine.playLaunch()
     }
 

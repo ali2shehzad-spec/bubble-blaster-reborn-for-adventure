@@ -322,7 +322,7 @@ fun GamePlayScreen(
                 IconButton(
                     onClick = { viewModel.navigateTo(GameScreen.PAUSED) },
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(48.dp)
                         .background(Color.White.copy(alpha = 0.15f), CircleShape)
                         .testTag("pause_button")
                 ) {

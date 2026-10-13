@@ -23,7 +23,7 @@ class ExampleUnitTest {
             assertEquals(i, level.levelNumber)
             assertTrue(level.gridLayout.isNotEmpty())
 
-            if (i <= 20) {
+            if (i <= 15) {
                 assertEquals("Level $i should have 10 shots", 10, level.maxShots)
             } else {
                 assertEquals("Level $i should have 20 shots", 20, level.maxShots)

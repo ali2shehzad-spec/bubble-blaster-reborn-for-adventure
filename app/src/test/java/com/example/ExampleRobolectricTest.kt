@@ -96,4 +96,53 @@ class ExampleRobolectricTest {
     val clusters = physics.findFloatingClusters(grid)
     org.junit.Assert.assertTrue(clusters.isEmpty())
   }
+
+  @Test
+  fun `test achievement coin reward full claiming without truncation`() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val saveManager = SaveManager(context)
+    val initialCoins = saveManager.coins
+
+    // Unlock and claim boss_slayer achievement (500 coins)
+    saveManager.unlockAchievement("boss_slayer")
+    val reward = saveManager.claimAchievement("boss_slayer")
+    assertEquals(500, reward)
+    assertEquals(initialCoins + 500, saveManager.coins)
+
+    // Cannot double claim
+    val doubleReward = saveManager.claimAchievement("boss_slayer")
+    assertEquals(0, doubleReward)
+  }
+
+  @Test
+  fun `test continue with extra shots flow in ViewModel`() {
+    val application = ApplicationProvider.getApplicationContext<android.app.Application>()
+    val viewModel = com.example.neonpop.game.GameViewModel(application)
+
+    viewModel.startLevel(1, com.example.neonpop.model.GameMode.CLASSIC)
+    val initialShots = viewModel.uiState.value.shotsRemaining
+
+    // Purchase +5 shots continue
+    viewModel.continueWithExtraShots(5)
+    assertEquals(initialShots + 5, viewModel.uiState.value.shotsRemaining)
+    assertEquals(com.example.neonpop.model.GameScreen.PLAYING, viewModel.uiState.value.currentScreen)
+  }
+
+  @Test
+  fun `test user settings persistence`() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val saveManager = SaveManager(context)
+
+    saveManager.sfxEnabled = false
+    saveManager.musicEnabled = false
+    saveManager.hapticsEnabled = false
+    saveManager.masterVolume = 0.5f
+
+    // New instance reads persisted values
+    val reloaded = SaveManager(context)
+    assertEquals(false, reloaded.sfxEnabled)
+    assertEquals(false, reloaded.musicEnabled)
+    assertEquals(false, reloaded.hapticsEnabled)
+    assertEquals(0.5f, reloaded.masterVolume, 0.01f)
+  }
 }

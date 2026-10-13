@@ -104,7 +104,7 @@ fun SettingsDialog(
                     IconButton(
                         onClick = { viewModel.navigateTo(GameScreen.HOME) },
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(48.dp)
                             .background(Color.White.copy(alpha = 0.12f), CircleShape)
                             .testTag("settings_close_button")
                     ) {
