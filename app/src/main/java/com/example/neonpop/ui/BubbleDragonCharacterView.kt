@@ -179,11 +179,11 @@ private fun DrawScope.drawBubbleDragon(
 
     val tailPath = Path().apply {
         moveTo(tailBaseX, tailBaseY - h * 0.06f)
-        quadraticBezierTo(
+        quadraticTo(
             tailBaseX - w * 0.12f, tailBaseY - h * 0.14f,
             tailTipX, tailTipY
         )
-        quadraticBezierTo(
+        quadraticTo(
             tailBaseX - w * 0.10f, tailBaseY + h * 0.04f,
             tailBaseX, tailBaseY + h * 0.08f
         )
@@ -254,7 +254,7 @@ private fun DrawScope.drawBubbleDragon(
             centerX + w * 0.20f, baseY - h * 0.08f
         )
         // curve top shoulder
-        quadraticBezierTo(centerX, baseY - h * 0.15f, centerX - w * 0.20f, baseY - h * 0.08f)
+        quadraticTo(centerX, baseY - h * 0.15f, centerX - w * 0.20f, baseY - h * 0.08f)
         close()
     }
     drawPath(bodyRect, skinColor)
@@ -301,11 +301,11 @@ private fun DrawScope.drawBubbleDragon(
     // Cute chubby snout pointing forward/right
     val snoutPath = Path().apply {
         moveTo(headCenterX + w * 0.05f, headCenterY - h * 0.08f)
-        quadraticBezierTo(
+        quadraticTo(
             headCenterX + w * 0.28f, headCenterY - h * 0.04f,
             headCenterX + w * 0.26f, headCenterY + h * 0.08f
         )
-        quadraticBezierTo(
+        quadraticTo(
             headCenterX + w * 0.12f, headCenterY + h * 0.12f,
             headCenterX, headCenterY + h * 0.08f
         )
@@ -409,7 +409,7 @@ private fun DrawScope.drawBubbleDragon(
         if (recoil > 0.3f || isVictory) {
             // Open shouting/cheering mouth
             moveTo(headCenterX + w * 0.08f, headCenterY + h * 0.06f)
-            quadraticBezierTo(
+            quadraticTo(
                 headCenterX + w * 0.18f, headCenterY + h * 0.14f,
                 headCenterX + w * 0.24f, headCenterY + h * 0.05f
             )
@@ -417,7 +417,7 @@ private fun DrawScope.drawBubbleDragon(
         } else {
             // Cute smile
             moveTo(headCenterX + w * 0.10f, headCenterY + h * 0.06f)
-            quadraticBezierTo(
+            quadraticTo(
                 headCenterX + w * 0.18f, headCenterY + h * 0.10f,
                 headCenterX + w * 0.23f, headCenterY + h * 0.05f
             )
@@ -479,7 +479,7 @@ private fun DrawScope.drawBubbleDragon(
         // Throwing / Firing Bubble motion: arms thrown forward & upward!
         val throwArm = Path().apply {
             moveTo(centerX + w * 0.08f, baseY - h * 0.02f)
-            quadraticBezierTo(
+            quadraticTo(
                 centerX + w * 0.22f, baseY - h * 0.14f,
                 centerX + w * 0.36f, baseY - h * 0.16f
             )
@@ -538,7 +538,7 @@ private fun DrawScope.drawBubbleDragon(
         // Normal state: Paws holding and turning the crank handle!
         val pawArm = Path().apply {
             moveTo(centerX + w * 0.08f, baseY)
-            quadraticBezierTo(
+            quadraticTo(
                 centerX + w * 0.20f, baseY + h * 0.02f,
                 handleX, handleY
             )
