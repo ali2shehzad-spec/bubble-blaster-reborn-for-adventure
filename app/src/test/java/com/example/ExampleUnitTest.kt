@@ -25,8 +25,10 @@ class ExampleUnitTest {
 
             if (i <= 15) {
                 assertEquals("Level $i should have 10 shots", 10, level.maxShots)
-            } else {
+            } else if (i <= 25) {
                 assertEquals("Level $i should have 20 shots", 20, level.maxShots)
+            } else {
+                assertEquals("Level $i should have 30 shots", 30, level.maxShots)
             }
         }
     }

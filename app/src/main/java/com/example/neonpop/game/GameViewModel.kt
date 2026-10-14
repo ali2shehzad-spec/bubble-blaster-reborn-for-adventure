@@ -259,7 +259,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             comboCount = 0,
             feverProgress = 0f,
             isFeverActive = false,
-            shotsRemaining = if (mode == GameMode.ZEN) 999 else if (config.levelNumber <= 15) 10 else 20,
+            shotsRemaining = if (mode == GameMode.ZEN) 999 else config.maxShots,
             timeRemainingSeconds = if (config.timeLimitSeconds > 0) config.timeLimitSeconds else 75,
             starsRescued = 0,
             totalStarsToRescue = starCount,

@@ -145,4 +145,32 @@ class ExampleRobolectricTest {
     assertEquals(false, reloaded.hapticsEnabled)
     assertEquals(0.5f, reloaded.masterVolume, 0.01f)
   }
+
+  @Test
+  fun `test shot limits across progression in ViewModel`() {
+    val application = ApplicationProvider.getApplicationContext<android.app.Application>()
+    val viewModel = com.example.neonpop.game.GameViewModel(application)
+    // Unlock all levels in saveManager so AntiCheatGuard permits testing all levels
+    viewModel.saveManager.currentUnlockedLevel = 300
+
+    // Level <= 15: 10 shots
+    viewModel.startLevel(1, com.example.neonpop.model.GameMode.CLASSIC)
+    assertEquals(10, viewModel.uiState.value.shotsRemaining)
+    viewModel.startLevel(15, com.example.neonpop.model.GameMode.CLASSIC)
+    assertEquals(10, viewModel.uiState.value.shotsRemaining)
+
+    // Level 16..25: 20 shots
+    viewModel.startLevel(16, com.example.neonpop.model.GameMode.CLASSIC)
+    assertEquals(20, viewModel.uiState.value.shotsRemaining)
+    viewModel.startLevel(25, com.example.neonpop.model.GameMode.CLASSIC)
+    assertEquals(20, viewModel.uiState.value.shotsRemaining)
+
+    // After Level 25 (26+): 30 shots
+    viewModel.startLevel(26, com.example.neonpop.model.GameMode.CLASSIC)
+    assertEquals(30, viewModel.uiState.value.shotsRemaining)
+    viewModel.startLevel(50, com.example.neonpop.model.GameMode.CLASSIC)
+    assertEquals(30, viewModel.uiState.value.shotsRemaining)
+    viewModel.startLevel(300, com.example.neonpop.model.GameMode.CLASSIC)
+    assertEquals(30, viewModel.uiState.value.shotsRemaining)
+  }
 }
