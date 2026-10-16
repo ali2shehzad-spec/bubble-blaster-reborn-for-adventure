@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.neonpop.data.SaveManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -172,5 +173,31 @@ class ExampleRobolectricTest {
     assertEquals(30, viewModel.uiState.value.shotsRemaining)
     viewModel.startLevel(300, com.example.neonpop.model.GameMode.CLASSIC)
     assertEquals(30, viewModel.uiState.value.shotsRemaining)
+  }
+
+  @Test
+  fun `test coins persist across game close and update on skin purchase`() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val saveManager = SaveManager(context)
+    saveManager.coins = 15000
+
+    // Simulate player closing game and opening it after half an hour
+    val reloadedSave = SaveManager(context)
+    assertEquals(15000, reloadedSave.coins)
+
+    val application = ApplicationProvider.getApplicationContext<android.app.Application>()
+    val viewModel = com.example.neonpop.game.GameViewModel(application)
+    assertEquals(15000, viewModel.saveManager.coins)
+
+    // Purchase skin #500 (from new tier after 500 priced at 6000 coins)
+    val success = viewModel.buySkinColour(500, 6000)
+    assertTrue(success)
+    assertEquals(9000, viewModel.saveManager.coins)
+    assertTrue(viewModel.saveManager.isSkinColourUnlocked(500))
+
+    // Close game and reopen again: coins remain exactly 9000
+    val finalSave = SaveManager(context)
+    assertEquals(9000, finalSave.coins)
+    assertTrue(finalSave.isSkinColourUnlocked(500))
   }
 }

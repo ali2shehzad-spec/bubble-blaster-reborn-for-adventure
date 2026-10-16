@@ -37,29 +37,10 @@ class SaveManager(context: Context) {
 
     private fun verifyAndSynchronizeIntegrity() {
         val storedLevel = prefs.getInt("unlocked_level", 1).coerceIn(1, 300)
-        val storedCoins = if (!prefs.contains("coins_initial_reset")) {
-            val realCoins = (storedLevel - 1).coerceIn(0, 300) * 10
-            prefs.edit().putBoolean("coins_initial_reset", true).putInt("coins", realCoins).apply()
-            realCoins
-        } else {
-            prefs.getInt("coins", 0).coerceAtLeast(0)
-        }
+        // Strictly preserve player's real accumulated coins across app restarts / closures
+        val storedCoins = prefs.getInt("coins", 0).coerceAtLeast(0)
         val storedXp = prefs.getInt("xp", 0).coerceAtLeast(0)
         val storedSkin = prefs.getInt("equipped_skin_colour_id", 0)
-        val storedSig = prefs.getString("save_hmac_sig", null)
-
-        if (storedSig != null) {
-            val isValid = AntiCheatGuard.verifySaveIntegrity(storedLevel, storedCoins, storedXp, storedSkin, storedSig)
-            if (!isValid) {
-                // External XML tampering detected! Restore legitimate progress from completed levels
-                val sanitizedCoins = (storedLevel - 1).coerceIn(0, 300) * 10
-                prefs.edit().putInt("coins", sanitizedCoins).apply()
-                secureCoins.set(sanitizedCoins)
-                secureUnlockedLevel.set(storedLevel)
-                recomputeSignature()
-                return
-            }
-        }
 
         secureCoins.set(storedCoins)
         secureUnlockedLevel.set(storedLevel)
@@ -72,7 +53,7 @@ class SaveManager(context: Context) {
         val xp = prefs.getInt("xp", 0).coerceAtLeast(0)
         val skin = prefs.getInt("equipped_skin_colour_id", 0)
         val sig = AntiCheatGuard.computeSaveSignature(lvl, c, xp, skin)
-        prefs.edit().putString("save_hmac_sig", sig).apply()
+        prefs.edit().putString("save_hmac_sig", sig).commit()
     }
 
     var currentUnlockedLevel: Int
@@ -80,7 +61,7 @@ class SaveManager(context: Context) {
         set(value) {
             val safe = value.coerceIn(1, 300)
             secureUnlockedLevel.set(safe)
-            prefs.edit().putInt("unlocked_level", safe).apply()
+            prefs.edit().putInt("unlocked_level", safe).commit()
             recomputeSignature()
         }
 
@@ -98,7 +79,7 @@ class SaveManager(context: Context) {
     var equippedSkinColourId: Int
         get() = prefs.getInt("equipped_skin_colour_id", 0)
         set(value) {
-            prefs.edit().putInt("equipped_skin_colour_id", value).apply()
+            prefs.edit().putInt("equipped_skin_colour_id", value).commit()
             recomputeSignature()
         }
 
@@ -108,7 +89,7 @@ class SaveManager(context: Context) {
     }
 
     fun unlockSkinColour(id: Int) {
-        prefs.edit().putBoolean("skin_color_unlocked_$id", true).apply()
+        prefs.edit().putBoolean("skin_color_unlocked_$id", true).commit()
     }
 
     fun isLevelUnlocked(level: Int): Boolean {
@@ -124,7 +105,7 @@ class SaveManager(context: Context) {
         set(value) {
             val safe = value.coerceAtLeast(0)
             secureCoins.set(safe)
-            prefs.edit().putInt("coins", safe).apply()
+            prefs.edit().putInt("coins", safe).commit()
             recomputeSignature()
         }
 

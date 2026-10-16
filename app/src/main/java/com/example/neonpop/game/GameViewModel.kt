@@ -297,7 +297,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     fun swapBubbles() {
         if (_uiState.value.projectile != null) return
-        soundEngine.playPop(3)
+        soundEngine.playBubbleSwap()
         haptics.pop()
         val cur = _uiState.value.currentBubble
         val nxt = _uiState.value.nextBubble
@@ -310,7 +310,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     fun applyBooster(type: BubbleType) {
         if (_uiState.value.projectile != null) return
         if (_uiState.value.boosterUsedThisRound) return
-        soundEngine.playLaser()
+        when (type) {
+            is BubbleType.Rainbow -> soundEngine.playRainbow()
+            is BubbleType.Bomb -> soundEngine.playBoosterSelect()
+            is BubbleType.Lightning -> soundEngine.playLaser()
+            else -> soundEngine.playBoosterSelect()
+        }
         haptics.combo()
         _uiState.value = _uiState.value.copy(
             currentBubble = type,
@@ -567,6 +572,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 return
             }
             is BubbleType.Rainbow -> {
+                soundEngine.playRainbow()
+                haptics.combo()
                 // Rainbow clears touching group
                 val neighbors = physics.getNeighbors(row, col)
                 val targetColor = neighbors.mapNotNull {
@@ -857,7 +864,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun onLevelLost() {
-        soundEngine.playPop(1)
+        soundEngine.playGameOver()
         _uiState.value = _uiState.value.copy(
             currentScreen = GameScreen.LEVEL_FAILED,
             mascotMood = MascotMood.SHOCKED

@@ -34,15 +34,25 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun testSkinColourDatabase500Colours() {
-        assertEquals(500, SkinColourDatabase.ALL_SKIN_COLOURS.size)
+    fun testSkinColourDatabaseColoursAndPricing() {
+        assertEquals(1000, SkinColourDatabase.ALL_SKIN_COLOURS.size)
         val defaultColour = SkinColourDatabase.getSkinColour(0)
         assertEquals("Classic Bub Emerald", defaultColour.name)
         assertEquals(30000, defaultColour.price)
 
-        val colour500 = SkinColourDatabase.getSkinColour(499)
-        assertEquals(499, colour500.id)
-        assertEquals(30000, colour500.price)
+        // First 500 colours (id 0..499) are 30,000 coins
+        val colour499 = SkinColourDatabase.getSkinColour(499)
+        assertEquals(499, colour499.id)
+        assertEquals(30000, colour499.price)
+
+        // Colours after 500 (id 500..999) are 6,000 coins
+        val colour500 = SkinColourDatabase.getSkinColour(500)
+        assertEquals(500, colour500.id)
+        assertEquals(6000, colour500.price)
+
+        val colour999 = SkinColourDatabase.getSkinColour(999)
+        assertEquals(999, colour999.id)
+        assertEquals(6000, colour999.price)
     }
 
     @Test

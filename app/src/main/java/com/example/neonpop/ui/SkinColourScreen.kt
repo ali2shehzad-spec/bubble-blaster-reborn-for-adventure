@@ -64,9 +64,18 @@ fun SkinColourScreen(
     val coins = uiState.totalCoins
     var previewId by remember { mutableIntStateOf(uiState.equippedSkinColourId) }
     val equippedId = uiState.equippedSkinColourId
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: All, 1: 6,000 Chroma, 2: 30,000 Elite, 3: Owned
 
     val allColours = SkinColourDatabase.ALL_SKIN_COLOURS
     val previewItem = SkinColourDatabase.getSkinColour(previewId)
+    val displayedColours = remember(selectedTab, equippedId) {
+        when (selectedTab) {
+            1 -> allColours.filter { it.price == 6000 }
+            2 -> allColours.filter { it.price == 30000 }
+            3 -> allColours.filter { saveManager.isSkinColourUnlocked(it.id) }
+            else -> allColours
+        }
+    }
 
     Box(
         modifier = modifier
@@ -216,16 +225,50 @@ fun SkinColourScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.height(38.dp)
                         ) {
-                            Text("BUY (30,000 🪙)", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                            Text("BUY (${previewItem.price} 🪙)", color = Color.Black, fontWeight = FontWeight.Black, fontSize = 12.sp)
                         }
                     }
                 }
             }
         }
 
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Filter Category Chips (All 1,000, 6k Chroma, 30k Elite, Owned)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val tabs = listOf(
+                "All (1,000)",
+                "Chroma (6k 🪙)",
+                "Elite (30k 🪙)",
+                "Owned"
+            )
+            tabs.forEachIndexed { index, label ->
+                val isSelected = selectedTab == index
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) Color(0xFFFF4081) else Color.White.copy(alpha = 0.08f),
+                    modifier = Modifier
+                        .clickable { selectedTab = index }
+                ) {
+                    Text(
+                        text = label,
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(4.dp))
 
-        // 500 Colours Grid
+        // 1,000 Colours Grid
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 74.dp),
             modifier = Modifier
@@ -235,7 +278,7 @@ fun SkinColourScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(allColours) { item ->
+            items(displayedColours) { item ->
                 val isUnlocked = saveManager.isSkinColourUnlocked(item.id)
                 val isEquipped = equippedId == item.id
                 val isSelected = previewId == item.id
@@ -294,8 +337,9 @@ fun SkinColourScreen(
                             fontWeight = FontWeight.Bold
                         )
 
+                        val priceLabel = if (isUnlocked) "OWNED" else if (item.price >= 1000) "${item.price / 1000}k 🪙" else "${item.price} 🪙"
                         Text(
-                            text = if (isUnlocked) "OWNED" else "30k 🪙",
+                            text = priceLabel,
                             color = if (isUnlocked) Color(0xFF25F05D) else Color(0xFFFFDE00),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.SemiBold
